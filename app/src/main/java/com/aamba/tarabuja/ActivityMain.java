@@ -2,6 +2,7 @@ package com.aamba.tarabuja;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -19,15 +20,18 @@ import com.android.volley.toolbox.Volley;
 
 import org.json.JSONObject;
 
-public class ActivityMain extends AppCompatActivity
+import java.util.Locale;
+
+public class ActivityMain extends AppCompatActivity implements TextToSpeech.OnInitListener
 {
-    private final String TAG = "WEATHER_APP";
+    private final String TAG = "TARABUJA";
     private final String API_KEY = "b51001a2373eaaa91b65b7f505ca5ca4";
 
     private TextView cityNameTv, weatherTv, tempTv, descTv, pressureTv, humidityTv;
     private ImageView weatherIv;
 
     private RequestQueue queue;
+    private TextToSpeech textToSpeech;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -38,8 +42,22 @@ public class ActivityMain extends AppCompatActivity
         //init volley singleton
         queue = Volley.newRequestQueue(this);
 
+        textToSpeech = new TextToSpeech(this, this);
+
         bindViews();
         downloadData();
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        if(textToSpeech != null)
+        {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
+
+        super.onDestroy();
     }
 
     private void bindViews()
@@ -142,5 +160,27 @@ public class ActivityMain extends AppCompatActivity
                 });
 
         queue.add(imageRequest);
+    }
+
+    @Override
+    public void onInit(int status)
+    {
+        if (status == TextToSpeech.SUCCESS)
+        {
+            int result = textToSpeech.setLanguage(Locale.US);
+            if (result == TextToSpeech.LANG_MISSING_DATA
+                    || result == TextToSpeech.LANG_NOT_SUPPORTED)
+            {
+                Log.e("TTS", "Language is not supported");
+            }
+            else
+            {
+                textToSpeech.speak("text to speach initialized successfully", TextToSpeech.QUEUE_FLUSH, null);
+            }
+        }
+        else
+        {
+            Log.e("TTS", "Initilization Failed");
+        }
     }
 }
