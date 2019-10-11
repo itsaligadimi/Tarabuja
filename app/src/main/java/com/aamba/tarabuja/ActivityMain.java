@@ -1,6 +1,7 @@
 package com.aamba.tarabuja;
 
 import android.graphics.Bitmap;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -17,12 +18,15 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.squareup.seismic.ShakeDetector;
 
 import org.json.JSONObject;
 
 import java.util.Locale;
 
-public class ActivityMain extends AppCompatActivity implements TextToSpeech.OnInitListener
+public class ActivityMain extends AppCompatActivity implements
+        TextToSpeech.OnInitListener,
+        ShakeDetector.Listener
 {
     private final String TAG = "TARABUJA";
     private final String API_KEY = "b51001a2373eaaa91b65b7f505ca5ca4";
@@ -39,10 +43,12 @@ public class ActivityMain extends AppCompatActivity implements TextToSpeech.OnIn
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //init volley singleton
         queue = Volley.newRequestQueue(this);
-
         textToSpeech = new TextToSpeech(this, this);
+        SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        ShakeDetector shakeDetector = new ShakeDetector(this);
+        shakeDetector.start(sensorManager);
+
 
         bindViews();
         downloadData();
@@ -51,7 +57,7 @@ public class ActivityMain extends AppCompatActivity implements TextToSpeech.OnIn
     @Override
     protected void onDestroy()
     {
-        if(textToSpeech != null)
+        if (textToSpeech != null)
         {
             textToSpeech.stop();
             textToSpeech.shutdown();
@@ -182,5 +188,11 @@ public class ActivityMain extends AppCompatActivity implements TextToSpeech.OnIn
         {
             Log.e("TTS", "Initilization Failed");
         }
+    }
+
+    @Override
+    public void hearShake()
+    {
+        textToSpeech.speak(descTv.getText().toString(), TextToSpeech.QUEUE_FLUSH, null);
     }
 }

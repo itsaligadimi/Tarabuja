@@ -29,4 +29,7 @@ dependencies {
 
     //volley for networking
     implementation 'com.android.volley:volley:1.1.1'
+
+    //shake detector
+    implementation 'com.squareup:seismic:1.0.2'
 }
