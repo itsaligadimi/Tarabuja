@@ -193,6 +193,9 @@ public class ActivityMain extends AppCompatActivity implements
     @Override
     public void hearShake()
     {
-        textToSpeech.speak(descTv.getText().toString(), TextToSpeech.QUEUE_FLUSH, null);
+        if(!textToSpeech.isSpeaking())
+        {
+            textToSpeech.speak(descTv.getText().toString(), TextToSpeech.QUEUE_FLUSH, null);
+        }
     }
 }
