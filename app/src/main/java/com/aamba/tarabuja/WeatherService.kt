@@ -3,10 +3,10 @@ package com.aamba.tarabuja
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.hardware.SensorManager
-import android.os.Binder
-import android.os.IBinder
+import android.os.*
 import android.speech.tts.TextToSpeech
 import android.speech.tts.TextToSpeech.OnInitListener
 import android.util.Log
@@ -69,6 +69,7 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
 
     override fun onBind(intent: Intent): IBinder
     {
+        singleVibrate()
         return binder
     }
 
@@ -112,7 +113,7 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
 
     override fun hearShake()
     {
-        downloadData();
+        downloadData()
     }
 
     private fun speakWeather(city: String, weather: String, temperature: String)
@@ -127,6 +128,8 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
 
     private fun downloadData()
     {
+        singleVibrate()
+
         val url = String.format(
             "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s",
             "tabriz",
@@ -170,6 +173,7 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
                 downloadImage(icon)
             }
 
+            doubleVibrate()
             speakWeather(city!!, weather!!, (temp!! - 273).toString())
         } catch (e: Exception)
         {
@@ -189,4 +193,26 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
         }
         queue!!.add(imageRequest)
     }
+
+    fun singleVibrate()
+    {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            vibrator.vibrate(100)
+        }
+    }
+
+    fun doubleVibrate()
+    {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val vibrationEffect = VibrationEffect.createWaveform(longArrayOf(0, 100, 50, 100), -1)
+            vibrator.vibrate(vibrationEffect)
+        } else {
+            vibrator.vibrate(longArrayOf(0, 50, 50, 50), -1)
+        }
+    }
+
 }
