@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,12 +16,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 
 public class ActivityMain extends AppCompatActivity implements ActivityMainInterface
 {
+    private SwitchCompat bgServiceSw;
     private TextView cityNameTv, weatherTv, tempTv, descTv, pressureTv, humidityTv;
     private ImageView weatherIv;
 
+    private SharedPreferences preferences;
     private Intent serviceIntent;
     private WeatherService service;
 
@@ -30,6 +34,7 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        bgServiceSw = findViewById(R.id.bg_service_sw);
         cityNameTv = findViewById(R.id.city_name_tv);
         weatherTv = findViewById(R.id.weather_tv);
         tempTv = findViewById(R.id.temp_tv);
@@ -44,6 +49,14 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
                     new NotificationChannel("shaky_weather", "Shaky weather", NotificationManager.IMPORTANCE_DEFAULT)
             );
         }
+
+        preferences = getSharedPreferences("shaky_weather", Context.MODE_PRIVATE);
+        bgServiceSw.setChecked(preferences.getBoolean("keep_service_alive", true));
+        bgServiceSw.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            preferences.edit()
+                    .putBoolean("keep_service_alive", isChecked)
+                    .apply();
+        });
     }
 
     @Override
@@ -70,7 +83,7 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
     @Override
     protected void onPause()
     {
-        if (service != null )
+        if (service != null)
         {
             service.setView(null);
         }
@@ -81,6 +94,19 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
         }
 
         super.onPause();
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        if (!preferences.getBoolean("keep_service_alive", true))
+        {
+            if (isServiceRunning(this, WeatherService.class))
+            {
+                stopService(serviceIntent);
+            }
+        }
+        super.onDestroy();
     }
 
     @Override
