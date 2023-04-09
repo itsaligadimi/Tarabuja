@@ -1,23 +1,31 @@
 package com.aamba.tarabuja
 
+import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.hardware.SensorManager
 import android.os.*
 import android.speech.tts.TextToSpeech
 import android.speech.tts.TextToSpeech.OnInitListener
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.VolleyError
 import com.android.volley.toolbox.ImageRequest
+import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.squareup.seismic.ShakeDetector
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 
@@ -30,11 +38,15 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
         set(value)
         {
             field = value
-            if(value != null)
+            if (value != null)
                 downloadData()
         }
+
+    private lateinit var preferences: SharedPreferences
+    private lateinit var location: FusedLocationProviderClient
     private var queue: RequestQueue? = null
     private var textToSpeech: TextToSpeech? = null
+    private var ttsWorking = false
     private val binder = WeatherBinder()
     private var city: String? = null
     private var weather: String? = null
@@ -43,15 +55,24 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
     private var pressure: Int? = null
     private var humidity: Int? = null
 
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int
+    override fun onCreate()
     {
+        super.onCreate()
+
+        preferences = getSharedPreferences("shaky_weather", MODE_PRIVATE)
+        city = preferences.getString("city", null)
+
+        location = LocationServices.getFusedLocationProviderClient(applicationContext)
+
         queue = Volley.newRequestQueue(this)
         textToSpeech = TextToSpeech(this, this)
         val sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         val shakeDetector = ShakeDetector(this)
         shakeDetector.start(sensorManager, SensorManager.SENSOR_DELAY_GAME)
+    }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int
+    {
         val notificationIntent = Intent(this, ActivityMain::class.java)
         val pendingIntent =
             PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
@@ -88,6 +109,11 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
         super.onDestroy()
     }
 
+    fun permissionGranted()
+    {
+        fetchLocation()
+    }
+
     override fun onInit(status: Int)
     {
         if (status == TextToSpeech.SUCCESS)
@@ -100,14 +126,54 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
                 Log.e("TTS", "Language is not supported")
             } else
             {
+                ttsWorking = true
                 textToSpeech!!.speak(
                     "Text to speech initialized successfully",
                     TextToSpeech.QUEUE_FLUSH, null, null
                 )
+
+                fetchLocation()
             }
         } else
         {
             Log.e("TTS", "Initilization Failed")
+        }
+    }
+
+    private fun fetchLocation()
+    {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        )
+        {
+            return
+        }
+        location.lastLocation.addOnSuccessListener { lastLocation ->
+            if (lastLocation == null)
+                return@addOnSuccessListener
+
+            val jsonObjectRequest = JsonArrayRequest(
+                Request.Method.GET,
+                "http://api.openweathermap.org/geo/1.0/reverse?lat=${lastLocation.latitude}&lon=${lastLocation.longitude}&limit=1&appid=$API_KEY",
+                null,
+                { response: JSONArray? ->
+                    city = response?.getJSONObject(0)?.getString("name")
+                    city?.run {
+                        speak("your city is $this")
+                        preferences!!.edit()
+                            .putString("city", city)
+                            .apply()
+                    }
+                }
+            ) { error: VolleyError ->
+                Log.d(TAG, error.toString())
+            }
+
+            //add request to the queue
+            queue!!.add(jsonObjectRequest)
+        }.addOnFailureListener { exception ->
         }
     }
 
@@ -118,21 +184,33 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
 
     private fun speakWeather(city: String, weather: String, temperature: String)
     {
-        if (textToSpeech?.isSpeaking == true)
+        speak("$weather. The temperature is $temperature degrees Celsius in $city.")
+    }
+
+    private fun speak(speech: String)
+    {
+        if (!ttsWorking)
         {
-            textToSpeech?.stop()
+            vibrateError()
+            return
         }
-        val speech = "$weather. The temperature is $temperature degrees Celsius in $city."
-        textToSpeech?.speak(speech, TextToSpeech.QUEUE_FLUSH, null, null)
+        textToSpeech?.speak(speech, TextToSpeech.QUEUE_ADD, null, null)
     }
 
     private fun downloadData()
     {
+        if (city.isNullOrEmpty())
+        {
+            speak("I don't know where you are")
+            fetchLocation()
+            return
+        }
+
         singleVibrate()
 
         val url = String.format(
             "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s",
-            "tabriz",
+            city,
             API_KEY
         )
         val jsonObjectRequest = JsonObjectRequest(
@@ -197,9 +275,11 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
     fun singleVibrate()
     {
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
             vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
+        } else
+        {
             vibrator.vibrate(100)
         }
     }
@@ -207,12 +287,25 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
     fun doubleVibrate()
     {
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
             val vibrationEffect = VibrationEffect.createWaveform(longArrayOf(0, 100, 50, 100), -1)
             vibrator.vibrate(vibrationEffect)
-        } else {
+        } else
+        {
             vibrator.vibrate(longArrayOf(0, 50, 50, 50), -1)
         }
     }
 
+    fun vibrateError()
+    {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else
+        {
+            vibrator.vibrate(500)
+        }
+    }
 }

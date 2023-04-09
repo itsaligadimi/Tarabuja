@@ -1,5 +1,6 @@
 package com.aamba.tarabuja;
 
+import android.Manifest;
 import android.app.ActivityManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -57,6 +58,26 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
                     .putBoolean("keep_service_alive", isChecked)
                     .apply();
         });
+
+
+        if (!PermMan.Companion.isGranted(this, Manifest.permission.ACCESS_COARSE_LOCATION))
+        {
+            PermMan.Companion.build().activity(this)
+                    .permission(
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                    ).listener(new PermMan.PermResult()
+                    {
+                        @Override
+                        public void granted()
+                        {
+                            super.granted();
+                            if (service != null)
+                            {
+                                service.permissionGranted();
+                            }
+                        }
+                    }).ask();
+        }
     }
 
     @Override
