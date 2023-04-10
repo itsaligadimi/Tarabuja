@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.aamba.tarabuja">
+    package="com.agadimi.shakyweather">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -18,12 +18,12 @@
         android:theme="@style/SplashTheme"
         android:usesCleartextTraffic="true">
         <service
-            android:name=".WeatherService"
+            android:name="com.agadimi.shakyweather.WeatherService"
             android:enabled="true"
             android:exported="false"/>
 
         <activity
-            android:name=".ActivityMain"
+            android:name="com.agadimi.shakyweather.ActivityMain"
             android:exported="true"
             android:theme="@style/MainTheme">
             <intent-filter>

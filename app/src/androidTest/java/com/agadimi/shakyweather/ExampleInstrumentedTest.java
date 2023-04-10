@@ -1,4 +1,4 @@
-package com.aamba.tarabuja;
+package com.agadimi.shakyweather;
 
 import android.content.Context;
 

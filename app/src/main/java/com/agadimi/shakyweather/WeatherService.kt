@@ -1,4 +1,4 @@
-package com.aamba.tarabuja
+package com.agadimi.shakyweather
 
 import android.Manifest
 import android.app.Notification
@@ -184,17 +184,17 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
 
     private fun speakWeather(city: String, weather: String, temperature: String)
     {
-        speak("$weather. The temperature is $temperature degrees Celsius in $city.")
+        speak("$weather. The temperature is $temperature degrees Celsius in $city.", true)
     }
 
-    private fun speak(speech: String)
+    private fun speak(speech: String, flush: Boolean = false)
     {
         if (!ttsWorking)
         {
             vibrateError()
             return
         }
-        textToSpeech?.speak(speech, TextToSpeech.QUEUE_ADD, null, null)
+        textToSpeech?.speak(speech, if(flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, null, null)
     }
 
     private fun downloadData()

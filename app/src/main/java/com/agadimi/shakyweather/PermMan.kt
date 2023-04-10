@@ -1,11 +1,10 @@
-package com.aamba.tarabuja
+package com.agadimi.shakyweather
 
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 
 
 class PermMan()
