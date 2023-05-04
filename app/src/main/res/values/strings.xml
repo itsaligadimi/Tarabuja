@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Shaky Weather</string>
+    <string name="location_permission_description">To provide accurate weather information for your current city, we need to access your location even when you are not using the app.</string>
 </resources>

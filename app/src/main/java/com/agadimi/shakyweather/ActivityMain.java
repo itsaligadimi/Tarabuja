@@ -9,15 +9,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class ActivityMain extends AppCompatActivity implements ActivityMainInterface
 {
@@ -60,23 +66,33 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
         });
 
 
-        if (!PermMan.Companion.isGranted(this, Manifest.permission.ACCESS_COARSE_LOCATION))
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
         {
-            PermMan.Companion.build().activity(this)
-                    .permission(
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                    ).listener(new PermMan.PermResult()
-                    {
-                        @Override
-                        public void granted()
-                        {
-                            super.granted();
-                            if (service != null)
-                            {
-                                service.permissionGranted();
-                            }
-                        }
-                    }).ask();
+            Log.d("ActivityMain", "should request permissions");
+            AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
+            alertBuilder.setCancelable(true);
+            alertBuilder.setTitle("Location permission necessary");
+            alertBuilder.setMessage(R.string.location_permission_description);
+            alertBuilder.setPositiveButton(android.R.string.yes, (dialog, which) -> {
+                Log.d("ActivityMain", "Request permissions");
+                String[] permissions;
+//                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+//                {
+//                    permissions = new String[]{
+//                            Manifest.permission.ACCESS_COARSE_LOCATION,
+//                            Manifest.permission.ACCESS_FINE_LOCATION
+//                    };
+//                }
+//                else
+//                {
+                permissions = new String[]{
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                };
+//                }
+                ActivityCompat.requestPermissions(this, permissions, 1001);
+            });
+            AlertDialog alert = alertBuilder.create();
+            alert.show();
         }
     }
 
@@ -128,6 +144,24 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
             }
         }
         super.onDestroy();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
+    {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == 1001)
+        {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            )
+            {
+                if (service != null)
+                {
+                    service.permissionGranted();
+                }
+            }
+        }
     }
 
     @Override
@@ -200,5 +234,4 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
         }
         return false;
     }
-
 }

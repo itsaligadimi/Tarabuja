@@ -80,6 +80,7 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
         val notification: Notification = NotificationCompat.Builder(this, "shaky_weather")
             .setContentTitle("Shaky weather")
             .setContentText("Shake to know the weather")
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentIntent(pendingIntent)
             .build()
 
