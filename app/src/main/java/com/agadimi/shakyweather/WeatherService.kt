@@ -128,12 +128,10 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
             } else
             {
                 ttsWorking = true
-                textToSpeech!!.speak(
-                    "Text to speech initialized successfully",
-                    TextToSpeech.QUEUE_FLUSH, null, null
-                )
-
-                fetchLocation()
+//                textToSpeech!!.speak(
+//                    "Text to speech initialized successfully",
+//                    TextToSpeech.QUEUE_FLUSH, null, null
+//                )
             }
         } else
         {
@@ -162,7 +160,9 @@ class WeatherService : Service(), OnInitListener, ShakeDetector.Listener
                 { response: JSONArray? ->
                     city = response?.getJSONObject(0)?.getString("name")
                     city?.run {
-                        speak("your city is $this")
+                        view?.let{
+                            it.cityName(city)
+                        }
                         preferences!!.edit()
                             .putString("city", city)
                             .apply()

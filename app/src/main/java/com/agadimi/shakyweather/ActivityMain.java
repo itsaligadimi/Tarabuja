@@ -18,11 +18,11 @@ import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 public class ActivityMain extends AppCompatActivity implements ActivityMainInterface
@@ -76,20 +76,24 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
             alertBuilder.setPositiveButton(android.R.string.yes, (dialog, which) -> {
                 Log.d("ActivityMain", "Request permissions");
                 String[] permissions;
-//                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-//                {
-//                    permissions = new String[]{
-//                            Manifest.permission.ACCESS_COARSE_LOCATION,
-//                            Manifest.permission.ACCESS_FINE_LOCATION
-//                    };
-//                }
-//                else
-//                {
-                permissions = new String[]{
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                };
-//                }
-                ActivityCompat.requestPermissions(this, permissions, 1001);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                {
+                    permissions = new String[]{
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+//                            Manifest.permission.ACCESS_FINE_LOCATION,
+//                            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    };
+                }
+                else
+                {
+                    permissions = new String[]{
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+//                            Manifest.permission.ACCESS_FINE_LOCATION,
+                    };
+                }
+
+                locationPermissionRequest.launch(permissions);
+
             });
             AlertDialog alert = alertBuilder.create();
             alert.show();
@@ -144,24 +148,6 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
             }
         }
         super.onDestroy();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
-    {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == 1001)
-        {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-            )
-            {
-                if (service != null)
-                {
-                    service.permissionGranted();
-                }
-            }
-        }
     }
 
     @Override
@@ -234,4 +220,18 @@ public class ActivityMain extends AppCompatActivity implements ActivityMainInter
         }
         return false;
     }
+
+    ActivityResultLauncher<String[]> locationPermissionRequest =
+            registerForActivityResult(
+                    new ActivityResultContracts.RequestMultiplePermissions(),
+                    result -> {
+                        if(result.containsKey(Manifest.permission.ACCESS_COARSE_LOCATION) && result.get(Manifest.permission.ACCESS_COARSE_LOCATION))
+                        {
+                            if(service != null)
+                            {
+                                service.permissionGranted();
+                            }
+                        }
+                    }
+            );
 }
